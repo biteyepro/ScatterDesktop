@@ -112,7 +112,7 @@
 	        selectedLocation:null,
             clonedLocation:null,
             selectedIdentity:null,
-            showingAll:false,
+            showingAll:true,
         }},
 	    created(){
 	    	this.selectedIdentity = this.identity.clone();
@@ -141,7 +141,7 @@
 		        this.selectedAccounts.map(acc => {
 			        neededNetworks.splice(neededNetworks.indexOf(acc.network().unique()), 1);
                 });
-
+                console.log('app accounts', this.accounts);
 		        return this.accounts
 			        .filter(x => {
 			        	return alreadySelectedUniques.includes(x.unique())
@@ -178,7 +178,7 @@
                             small:1,
 	                    });
                     	return {
-                    		title:this.showingAll ? account.formatted() : account.sendable(),
+                    		title:this.showingAll ? (account.sendable()==='address.bank' ? '.' + account.authority+' (EOSY account)' : account.formatted()) : (account.sendable()==='address.bank' ? '.' + account.authority+' (EOSY account)' : account.sendable()),
                             description,
                             actions
                         }

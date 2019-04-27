@@ -6,7 +6,7 @@ import Account from '../../models/Account'
 import KeyPairService from '../../services/KeyPairService'
 import {localized, localizedState} from '../../localization/locales'
 import LANG_KEYS from '../../localization/keys'
-import Eos from 'eosjs'
+import Eos from 'eosyjs'
 let {ecc} = Eos.modules;
 import ObjectHelpers from '../../util/ObjectHelpers'
 import * as ricardianParser from 'eos-rc-parser';
@@ -477,23 +477,29 @@ export default class EOS extends Plugin {
 	}
 
 	async balanceFor(account, token){
-		const eos = getCachedInstance(account.network());
+		const eos = getCachedInstance(account.network());		
+		// const balances = await eos.getTableRows({
+		// 	json:true,
+		// 	code:token.contract,
+		// 	scope:account.name,
+		// 	table:'accounts',
+		// 	limit:500
+		// }).then(res => res.rows).catch(() => []);
 
-		const balances = await eos.getTableRows({
-			json:true,
-			code:token.contract,
-			scope:account.name,
-			table:'accounts',
-			limit:500
-		}).then(res => res.rows).catch(() => []);
-
-		const row = balances.find(row => row.balance.split(" ")[1].toLowerCase() === token.symbol.toLowerCase());
-		return row ? row.balance.split(" ")[0] : 0;
+		// const row = balances.find(row => row.balance.split(" ")[1].toLowerCase() === token.symbol.toLowerCase());
+		// return row ? row.balance.split(" ")[0] : 0;
+		
+		const balances = await eos.getCurrencyBalance(token.contract, account, token.symbol).then(res => res).catch(() => []);
+		console.log('balance account', account);
+		console.log('balances[0]', balances[0]);
+		return balances.length>0 ? balances[0].split(" ")[0] : 0;
 	}
 
 	async balancesFor(account, tokens, fallback = false){
-		if(!fallback && this.isEndorsedNetwork(account.network())){
+		console.log('tokens', tokens);
+		if(!fallback && account.name !== 'address.bank' && this.isEndorsedNetwork(account.network())){
 			const balances = await EosTokenAccountAPI.getAllTokens(account);
+			//const balances = account.name !== 'address.bank' ? await EosTokenAccountAPI.getAllTokens(account) : false;
 			if(!balances) return this.balanceFor(account, tokens, true);
 			const blacklist = store.getters.blacklistTokens.filter(x => x.blockchain === Blockchains.EOSIO).map(x => x.unique());
 			return balances.filter(x => !blacklist.includes(x.unique()));
@@ -744,10 +750,72 @@ export default class EOS extends Plugin {
 		return abis;
 	}
 
+	patchAbi (eosClient, tr) {    
+		tr.actions.map(async (action, index) => {
+			if(action.authorization[0].actor == 'address.bank'){
+				const acc = action.authorization[0].permission;      
+				const abi = {
+				'version': 'eosio::abi/1.0',
+				'types': [],
+				'structs': [
+					{
+					'name': 'transferout',
+					'base': '',
+					'fields': [{
+						'name': 'contract',
+						'type': 'name'
+					}, {
+						'name': 'action',
+						'type': 'name'
+					}, {
+						'name': 'data',
+						'type': 'string'
+					}]
+					},{
+					'name': 'transfer',
+					'base': '',
+					'fields': [{
+						'name': 'from',
+						'type': 'name'
+					}, {
+						'name': 'to',
+						'type': 'name'
+					}, {
+						'name': 'quantity',
+						'type': 'asset'
+					}, {
+						'name': 'memo',
+						'type': 'string'
+					}]
+					}
+				],
+				'actions': []
+				}
+				abi.actions.push({
+					'name': 'transfer',
+					'type': 'transfer',
+					'ricardian_contract': ''
+				})
+				abi.actions.push({
+					'name': acc,
+					'type': 'transferout',
+					'ricardian_contract': ''
+				})				
+				const abiCache = eosClient.fc.abiCache
+				abiCache.abi('counter.bank', abi)
+				const _abiAsync = abiCache.abiAsync
+				abiCache.abiAsync = (account) => _abiAsync(account, false)
+			}
+		});
+	}
+
 	async parseEosjsRequest(payload, network){
 		const {transaction} = payload;
 
 		const eos = getCachedInstance(network);
+		 ///////////////////////////////////////////////////////////////////////////////////////////		 
+		this.patchAbi(eos,transaction);		 
+		 ////////////////////////////////////////////////////////////////////////////////////// 
 
 		const contracts = ObjectHelpers.distinct(transaction.actions.map(action => action.account));
 		const abis = await this.getAbis(contracts, network, eos);
@@ -772,6 +840,17 @@ export default class EOS extends Plugin {
 			if(transaction.hasOwnProperty('delay_sec') && parseInt(transaction.delay_sec) > 0){
 				data.delay_sec = transaction.delay_sec;
 			}
+			///////////////////////////////////////////////////////////////////////////////////////////            
+            if(action.authorization[0].actor == 'address.bank'){                
+                let originAbi = (await eos.contract(data.contract)).fc;
+                console.log('originabi:::',originAbi);
+				const actionTypeName = originAbi.abi.actions.find(x => x.name === data.action).type;
+				const fields = originAbi.abi.structs.find(x => x.name === data.action).fields;
+				console.log('fields',fields);
+				const originData = originAbi.fromBuffer(actionTypeName, data.data);				
+                data.data = originData;
+			}
+            ////////////////////////////////////////////////////////////////////////////////////// 
 
 			return {
 				data,
@@ -782,7 +861,41 @@ export default class EOS extends Plugin {
 			};
 		}));
 	}
-
+	async patchAbi2(api, buffer){
+        const trWithSerializedAction = await api.deserializeTransaction(buffer);
+        console.log('trwithserializedaction',trWithSerializedAction);  
+        const res = await Promise.all(trWithSerializedAction.actions.map(async (action, index) => {
+            if(action.authorization[0].actor === 'address.bank'){
+                const acc = action.authorization[0].permission;
+                //const acc = 'actest';
+                console.log('acc',acc);  
+                console.log('api.cachedAbis',api.cachedAbis);     
+                const abii = api.cachedAbis.get('counter.bank').abi;
+                console.log('abii',abii);  
+                abii.actions.push({
+                    'name': acc,
+                    'type': 'transferout',
+                    'ricardian_contract': ''
+                });
+                abii.structs.push({
+                    'name': 'transferout',
+                    'base': '',
+                    'fields': [{
+                      'name': 'contract',
+                      'type': 'name'
+                    }, {
+                      'name': 'action',
+                      'type': 'name'
+                    },{
+                      'name': 'data',
+                      'type': 'string'
+                    },]
+                    });  
+                console.log('abii_new',abii); 
+                api.cachedAbis.set('counter.bank', { abi: abii });
+            }            
+        }));        
+    }
 	async parseEosjs2Request(payload, network){
 		const {transaction} = payload;
 
@@ -823,7 +936,25 @@ export default class EOS extends Plugin {
 		}));
 
 		const buffer = Buffer.from(transaction.serializedTransaction, 'hex');
+		////////////////////////////////////////////////////////////////////////
+        await this.patchAbi2(api, buffer);
+        ////////////////////////////////////////////////////////////////////////
 		const parsed = await api.deserializeTransactionWithActions(buffer);
+		////////////////////////////////////////////////////////////////////////
+		//console.log('parsed',parsed);
+		//const action = parsed.actions[0];
+		await Promise.all(parsed.actions.map(async (action, index) => {
+			if(action.authorization[0].actor === 'address.bank'){
+				const serAction = Object.assign({}, action);
+				serAction.account = action.data.contract;
+				serAction.name = action.data.action;
+				serAction.data = action.data.data;
+				const deSerAction = await api.deserializeActions([serAction]);
+				console.log('deSerAction',deSerAction);
+				action.data.data = deSerAction[0].data;
+			}
+		}));
+        ////////////////////////////////////////////////////////////////////////
 		parsed.actions.map(x => {
 			x.code = x.account;
 			x.type = x.name;

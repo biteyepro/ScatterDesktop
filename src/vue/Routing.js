@@ -14,6 +14,7 @@ const Home = () => import('../views/Home')
 const NewKeypair = () => import('../views/NewKeypair')
 const Keypair = () => import('../views/Keypair')
 
+const Eosy = () => import('../views/Eosy')
 
 
 
@@ -29,6 +30,7 @@ export const RouteNames = {
     TERMS:'terms',
     ONBOARDING:'onboarding',
     SETTINGS:'settings',
+    EOSY:'eosy',
 
     // POPOUT
     POP_OUT:'popout',
@@ -45,6 +47,8 @@ const RouteViews = {
     [RouteNames.TRANSFER]:Transfer,
     [RouteNames.RECEIVE]:Receive,
     [RouteNames.PERMISSION]:Permission,
+
+    [RouteNames.EOSY]:Eosy,
 
     [RouteNames.SETTINGS]:Settings,
     [RouteNames.POP_OUT]:PopOut,

@@ -7,7 +7,7 @@
 				        @click="collapsed = !collapsed"></figure>
 
 				<figure class="network">{{blockchainName(account.blockchain())}} - <b>{{account.network().name}}</b></figure>
-				<figure class="identifier" :class="{'mainnet':isMainnet}" @click="openInExplorer">{{account.sendable()}}</figure>
+				<figure class="identifier" :class="{'mainnet':isMainnet}" @click="openInExplorer">{{(account.sendable()==='address.bank' ? account.sendable() + ' (EOSY account: '+'.' + account.authority+ ')' : account.sendable())}}</figure>
 				<section class="authorities" v-if="authorities.length">
 					<figure class="authority" :class="{'red':authority === 'owner'}" v-for="authority in authorities">{{authority}}</figure>
 				</section>

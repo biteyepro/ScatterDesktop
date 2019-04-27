@@ -515,7 +515,7 @@ const Locale = {
 	/*                                                  */
 	/****************************************************/
 	[USER_BAR.ManageIdentity]:() => `Manage Identity`,
-
+	[USER_BAR.CreateEosy]:() => `Create Eosy Account`,
 
 	/****************************************************/
 	/*                                                  */

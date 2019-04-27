@@ -513,6 +513,7 @@ const TRANSFER = prefixKeys('transfer', {
 
 const USER_BAR = prefixKeys('user_bar', {
 	ManageIdentity:'manage_id',
+	CreateEosy:'create_eosy'
 });
 
 const PROCESSES = prefixKeys('processes', {

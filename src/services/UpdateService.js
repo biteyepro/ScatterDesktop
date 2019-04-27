@@ -7,7 +7,7 @@ import ElectronHelpers from '../util/ElectronHelpers'
 
 export default class UpdateService {
 
-    static updateUrl(){ return `https://github.com/GetScatter/ScatterDesktop/releases` }
+    static updateUrl(){ return `https://github.com/biteyepro/SactterEosyDesktop/releases` }
 
     static async needsUpdate(){
         const scatter = store.state.scatter.clone();
@@ -27,7 +27,7 @@ export default class UpdateService {
     }
 
     static async needsUpdateNoPrompt(){
-        const {version, stringVersion, body, prerelease, name} = await fetch('https://api.github.com/repos/GetScatter/ScatterDesktop/releases/latest').then(res => res.json()).then(x => ({
+        const {version, stringVersion, body, prerelease, name} = await fetch('https://api.github.com/repos/biteyepro/SactterEosyDesktop/releases/latest').then(res => res.json()).then(x => ({
 	        name:x.name,
             version:mathematicalVersion(x.tag_name),
             stringVersion:x.tag_name,

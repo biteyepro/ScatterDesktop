@@ -1,7 +1,7 @@
 <template>
     <section>
         <back-bar v-on:back="back"
-                  :text="account ? account.sendable() : null"
+                  :text="account ? (account.sendable()==='address.bank' ? '.' + account.authority + ' (EOSY account)' : account.formatted()) : null"
                   :subtext="account ? account.network().name : null" />
 
         <section class="full-panel inner limited" v-if="token">
@@ -153,7 +153,9 @@
                                  :label="recipientLabel"
                                  :text="recipient"
                                  v-on:changed="x => recipient = x" />
-
+                            <figure>
+                                <b :class="{'red':true}">If transfer to an EOSY account, please check that Eosy account always start with dot, and without any other dot. for example: .myeosyac</b>
+                            </figure>
                             <transition name="slide-right" mode="out-in">
                                 recipientError:{{recipientError}}
                                 <section class="split-inputs" v-if="recipient.length > 0 && !isAlreadyContact && !recipientError">
@@ -173,7 +175,7 @@
                 <section class="transfer-details">
                     <section style="font-size: 18px;">
                         Sending <b :class="{'red':!!amountError}">{{parseFloat(amount ? amount : 0).toFixed(token.decimals)}} {{token ? token.symbol : ''}}</b>
-                        from <b :class="{'red':!account}">{{account ? account.sendable() : 'Select Account'}}</b>
+                        from <b :class="{'red':!account}">{{account ? (account.sendable()==='address.bank' ? '.' + account.authority + ' (EOSY account)' : account.formatted()) : 'Select Account'}}</b>
                         to <b :class="{'red':!recipient}">{{recipient ? recipient : 'Select Recipient'}}</b>
                     </section>
                 </section>
@@ -268,12 +270,13 @@
 
 	        senderAccounts(){
 		        const reducer = accs => accs.reduce((acc,x) => {
-			        if(!acc.find(y => `${y.networkUnique}${y.sendable()}` === `${x.networkUnique}${x.sendable()}`)) acc.push(x);
+                    //if(!acc.find(y => `${y.networkUnique}${y.sendable()}` === `${x.networkUnique}${x.sendable()}`)) acc.push(x);
+                    acc.push(x);
 			        return acc;
 		        }, []);
 
 		        const terms = this.searchTerms.trim().toLowerCase();
-
+                //console.log(this.accounts);
 		        return reducer(this.accounts)
                     .filter(x => {
                     	return x.blockchain().toLowerCase().match(terms)
@@ -285,7 +288,7 @@
                     .sort((a,b) => b.logins - a.logins)
                     .map(account => ({
                         id:account.unique(),
-                        title:account.sendable(),
+                        title:account.sendable()==='address.bank' ? '.' + account.authority + ' (EOSY account)' : account.formatted(),
                         description:`${account.network().name} - ${account.keypair().name}`,
                     }))
             },
@@ -588,6 +591,16 @@
 
         &.recipient {
             margin-left:calc(-50% - 2px);
+
+            b {
+                color:$dark-blue;
+
+                &.red {
+                    color:$red;
+                    animation: blink 1s ease infinite;
+                    font-size: 8pt;
+                }
+            }
         }
     }
 

@@ -3,9 +3,9 @@ import {store} from '../store/store';
 import * as Actions from '../store/constants';
 const Store = window.require('electron-store');
 
-const ABIS_NAME = 'abi';
-const SCATTER_DATA_NAME = 'scatter';
-const SCATTER_INTERMED_NAME = 'scatter_intermed';
+const ABIS_NAME = 'abi_eosy';
+const SCATTER_DATA_NAME = 'scatter_eosy';
+const SCATTER_INTERMED_NAME = 'scatter_intermed_eosy';
 
 const stores = {};
 const getStore = name => {

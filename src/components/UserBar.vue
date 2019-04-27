@@ -4,8 +4,11 @@
             <router-link :to="{name:RouteNames.IDENTITY}" class="action">
                 {{locale(langKeys.USER_BAR.ManageIdentity)}}
             </router-link>
-
+            <router-link :to="{name:RouteNames.EOSY}" class="action">
+                Create an EOSY account
+            </router-link>
         </section>
+        
 
         <section class="actions">
             <router-link :to="{name:RouteNames.SETTINGS, params:{panel:SETTINGS_OPTIONS.GENERAL}}" class="action">
